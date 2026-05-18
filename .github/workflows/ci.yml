@@ -1,0 +1,174 @@
+name: Continuous Integration & Deployment
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-infra:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Kubernetes Manifests
+        run: kubectl apply --dry-run=client -k k8s/
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+  build-test-package:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: [validate-infra]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and Test
+        run: mvn -B clean verify
+
+      - name: OWASP Dependency Check
+        run: mvn -B org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+        continue-on-error: true
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+          retention-days: 7
+          
+      - name: Upload Dependency Check Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: '**/target/dependency-check-report.html'
+          retention-days: 7
+
+  docker-build-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-test-package]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker Images
+        run: |
+          MODULES="product-service order-service inventory-service api-gateway notification-service"
+          for module in $MODULES; do
+            mvn -B -pl "${module}" -am -DskipTests jib:build \
+              -Djib.to.image=${{ secrets.AWS_ECR_REGISTRY }}/${module}:${{ github.sha }}
+          done
+
+  deploy-to-k3s:
+    name: Deploy to K3s
+    runs-on: ubuntu-latest
+    needs: [docker-build-push]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Update Kubernetes Manifests
+        run: |
+          cd k8s/overlays/aws
+          kustomize edit set image local/api-gateway=${{ secrets.AWS_ECR_REGISTRY }}/api-gateway:${{ github.sha }}
+          kustomize edit set image local/product-service=${{ secrets.AWS_ECR_REGISTRY }}/product-service:${{ github.sha }}
+          kustomize edit set image local/order-service=${{ secrets.AWS_ECR_REGISTRY }}/order-service:${{ github.sha }}
+          kustomize edit set image local/inventory-service=${{ secrets.AWS_ECR_REGISTRY }}/inventory-service:${{ github.sha }}
+          kustomize edit set image local/notification-service=${{ secrets.AWS_ECR_REGISTRY }}/notification-service:${{ github.sha }}
+          cat kustomization.yaml
+
+      - name: Apply Manifests
+        run: kubectl apply -k k8s/overlays/aws
+
+      - name: Wait for Rollout
+        run: |
+          kubectl rollout status deployment/api-gateway -n micro-marketplace --timeout=120s
+          kubectl rollout status deployment/product-service -n micro-marketplace --timeout=120s
+          kubectl rollout status deployment/order-service -n micro-marketplace --timeout=120s
+          kubectl rollout status deployment/inventory-service -n micro-marketplace --timeout=120s
+          kubectl rollout status deployment/notification-service -n micro-marketplace --timeout=120s
+
+  post-deployment-smoke-test:
+    name: Post-Deployment Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy-to-k3s]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: API Gateway Health Check
+        run: |
+          curl -s --fail http://api.13.61.61.209.nip.io/actuator/health || exit 1
+
+      - name: OAuth2 Token Generation and Product API Request
+        run: |
+          TOKEN=$(curl -s -X POST "http://auth.13.61.61.209.nip.io/realms/spring-boot-microservices-realm/protocol/openid-connect/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "client_id=spring-cloud-client" \
+            -d "client_secret=${{ secrets.KEYCLOAK_CLIENT_SECRET }}" \
+            -d "grant_type=client_credentials" | jq -r .access_token)
+          
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "Failed to retrieve OAuth2 token"
+            exit 1
+          fi
+
+          curl -s --fail -X POST "http://api.13.61.61.209.nip.io/api/product" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"name": "CI/CD Test Product", "description": "Smoke test via Github Actions", "price": 99.99}' || exit 1
