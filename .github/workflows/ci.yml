@@ -1,0 +1,231 @@
+---\nname: Continuous Integration & Deployment
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-infra:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Kubernetes Manifests
+        run: kubectl kustomize k8s/overlays/local
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+  build-test-package:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: [validate-infra]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and Test
+        run: mvn -B clean verify
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+          retention-days: 7
+          
+  docker-build-push:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [build-test-package]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::889812257815:role/github-actions-deploy-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker Images
+        run: |
+          MODULES="product-service order-service inventory-service api-gateway notification-service"
+          for module in $MODULES; do
+            mvn -B -pl "${module}" -am -DskipTests compile jib:build \
+              -Djib.to.image=${{ secrets.AWS_ECR_REGISTRY }}/${module}:${{ github.sha }}
+          done
+
+  deploy-to-k3s:
+    name: Deploy to K3s
+    runs-on: ubuntu-latest
+    needs: [docker-build-push]
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::889812257815:role/github-actions-deploy-role
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update ECR Image Pull Secret
+        run: |
+          for i in {1..10}; do kubectl delete secret ecr-secret -n default --ignore-not-found && break || sleep 15; done
+          for i in {1..10}; do
+            kubectl create secret docker-registry ecr-secret -n default \
+              --docker-server=${{ secrets.AWS_ECR_REGISTRY }} \
+              --docker-username=AWS \
+              --docker-password=$(aws ecr get-login-password --region ${{ secrets.AWS_REGION }}) && break || sleep 15
+          done
+
+
+      - name: Generate Kustomize Environment Files
+        run: |
+          mkdir -p k8s/generated
+          cat <<EOF > k8s/generated/runtime-values.env
+          PUBLIC_IP=${{ secrets.EC2_PUBLIC_IP }}
+          API_HOST=api.${{ secrets.EC2_PUBLIC_IP }}.nip.io
+          AUTH_HOST=auth.${{ secrets.EC2_PUBLIC_IP }}.nip.io
+          KEYCLOAK_ISSUER_URI=http://auth.${{ secrets.EC2_PUBLIC_IP }}.nip.io/realms/spring-boot-microservices-realm
+          DB_HOST=${{ secrets.AWS_RDS_ENDPOINT }}
+          EOF
+          cat <<EOF > k8s/generated/generated-secrets.env
+          MYSQL_PASSWORD=${{ secrets.AWS_RDS_PASSWORD }}
+          KEYCLOAK_PASSWORD=admin
+          GRAFANA_PASSWORD=admin
+          EOF
+
+      - name: Update Kubernetes Manifests
+        run: |
+          cd k8s/overlays/aws
+          kustomize edit set image local/api-gateway=${{ secrets.AWS_ECR_REGISTRY }}/api-gateway:${{ github.sha }}
+          kustomize edit set image local/product-service=${{ secrets.AWS_ECR_REGISTRY }}/product-service:${{ github.sha }}
+          kustomize edit set image local/order-service=${{ secrets.AWS_ECR_REGISTRY }}/order-service:${{ github.sha }}
+          kustomize edit set image local/inventory-service=${{ secrets.AWS_ECR_REGISTRY }}/inventory-service:${{ github.sha }}
+          kustomize edit set image local/notification-service=${{ secrets.AWS_ECR_REGISTRY }}/notification-service:${{ github.sha }}
+
+      - name: Apply Manifests
+        run: |
+          for i in {1..10}; do
+            kubectl apply -k k8s/overlays/aws && break || sleep 15
+          done
+
+      - name: Wait for Rollout
+        run: |
+          for i in {1..5}; do kubectl rollout status deployment/keycloak -n default --timeout=120s && break || sleep 10; done
+          for i in {1..5}; do kubectl rollout status deployment/api-gateway -n default --timeout=120s && break || sleep 10; done
+          for i in {1..5}; do kubectl rollout status deployment/product-service -n default --timeout=120s && break || sleep 10; done
+          for i in {1..5}; do kubectl rollout status deployment/order-service -n default --timeout=120s && break || sleep 10; done
+          for i in {1..5}; do kubectl rollout status deployment/inventory-service -n default --timeout=120s && break || sleep 10; done
+          for i in {1..5}; do kubectl rollout status deployment/notification-service -n default --timeout=120s && break || sleep 10; done
+
+  post-deployment-smoke-test:
+    name: Post-Deployment Smoke Test
+    runs-on: ubuntu-latest
+    needs: [deploy-to-k3s]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: API Gateway Health Check
+        run: |
+          curl -s --fail http://api.${{ secrets.EC2_PUBLIC_IP }}.nip.io/actuator/health || exit 1
+
+      - name: OAuth2 Token Generation and Product API Request
+        run: |
+          # Retry up to 12 times (1 minute) for Keycloak to fully initialize the realm
+          for i in {1..12}; do
+            TOKEN=$(curl -s -X POST "http://auth.${{ secrets.EC2_PUBLIC_IP }}.nip.io/realms/spring-boot-microservices-realm/protocol/openid-connect/token" \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              -d "client_id=spring-cloud-client" \
+              -d "client_secret=${{ secrets.KEYCLOAK_CLIENT_SECRET }}" \
+              -d "grant_type=client_credentials" | jq -r '.access_token // empty' 2>/dev/null) || true
+            
+            if [ -n "$TOKEN" ] && [ "$TOKEN" != "null" ]; then
+              echo "Successfully retrieved OAuth2 token"
+              break
+            fi
+            echo "Failed to retrieve OAuth2 token, retrying in 5s... ($i/12)"
+            sleep 5
+          done
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" == "null" ]; then
+            echo "Failed to retrieve OAuth2 token after retries"
+            exit 1
+          fi
+
+          # Retry the product API request up to 12 times (1 minute)
+          for i in {1..12}; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://api.${{ secrets.EC2_PUBLIC_IP }}.nip.io/api/product" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"name": "CI/CD Test Product", "description": "Smoke test via Github Actions", "price": 99.99}') || true
+            
+            if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "201" ]; then
+              echo "Product API request successful (HTTP $HTTP_STATUS)"
+              break
+            fi
+            echo "Product API request failed with HTTP $HTTP_STATUS, retrying in 5s... ($i/12)"
+            sleep 5
+          done
+
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+            echo "Product API request failed after retries"
+            exit 1
+          fi
