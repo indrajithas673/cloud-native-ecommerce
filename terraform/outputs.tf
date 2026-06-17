@@ -1,0 +1,39 @@
+output "instance_id" {
+  description = "EC2 instance ID for the k3s node."
+  value       = aws_instance.k3s.id
+}
+
+output "public_ip" {
+  description = "Elastic IP attached to the k3s node."
+  value       = aws_eip.k3s.public_ip
+}
+
+output "public_dns" {
+  description = "Public DNS name of the EC2 instance."
+  value       = aws_instance.k3s.public_dns
+}
+
+output "ssh_command" {
+  description = "Convenient SSH command for the Ubuntu host."
+  value       = "ssh ubuntu@${aws_eip.k3s.public_ip}"
+}
+
+output "kubeconfig_copy_command" {
+  description = "Command to copy the cluster kubeconfig locally after SSH access is working."
+  value       = "scp ubuntu@${aws_eip.k3s.public_ip}:/etc/rancher/k3s/k3s.yaml ./k3s.yaml"
+}
+
+output "k8s_runtime_values_file" {
+  description = "Path to the generated Kubernetes runtime values file"
+  value       = local_file.k8s_runtime_values.filename
+}
+
+output "ecr_repository_urls" {
+  description = "URLs of the ECR repositories"
+  value       = { for k, v in aws_ecr_repository.microservices : k => v.repository_url }
+}
+
+output "rds_endpoint" {
+  description = "Endpoint of the Amazon RDS instance"
+  value       = aws_db_instance.rds.endpoint
+}
