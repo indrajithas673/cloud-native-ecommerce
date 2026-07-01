@@ -1,0 +1,17 @@
+---\napiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - storage.yaml
+  - app-config.yaml
+  - infra.yaml
+  - apps.yaml
+  - ingress.yaml
+  - network-policy.yaml
+  - mysql.yaml
+
+configMapGenerator:
+  - name: keycloak-realm-import
+    files:
+      - spring-boot-microservices-realm.json

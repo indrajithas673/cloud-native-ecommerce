@@ -1,0 +1,90 @@
+---\napiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - ../../generated
+  - rds-init-job.yaml
+
+patches:
+  - path: patches.yaml
+
+images:
+  - name: local/api-gateway
+    newName: 035466343449.dkr.ecr.eu-north-1.amazonaws.com/ecommerce-microservices/api-gateway
+    newTag: latest
+  - name: local/product-service
+    newName: 035466343449.dkr.ecr.eu-north-1.amazonaws.com/ecommerce-microservices/product-service
+    newTag: latest
+  - name: local/order-service
+    newName: 035466343449.dkr.ecr.eu-north-1.amazonaws.com/ecommerce-microservices/order-service
+    newTag: latest
+  - name: local/inventory-service
+    newName: 035466343449.dkr.ecr.eu-north-1.amazonaws.com/ecommerce-microservices/inventory-service
+    newTag: latest
+  - name: local/notification-service
+    newName: 035466343449.dkr.ecr.eu-north-1.amazonaws.com/ecommerce-microservices/notification-service
+    newTag: latest
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: runtime-config
+      fieldPath: data.API_HOST
+    targets:
+      - select:
+          kind: Ingress
+          name: micro-marketplace-ingress
+        fieldPaths:
+          - spec.rules.0.host
+  - source:
+      kind: ConfigMap
+      name: runtime-config
+      fieldPath: data.AUTH_HOST
+    targets:
+      - select:
+          kind: Ingress
+          name: micro-marketplace-ingress
+        fieldPaths:
+          - spec.rules.1.host
+  - source:
+      kind: ConfigMap
+      name: runtime-config
+      fieldPath: data.KEYCLOAK_ISSUER_URI
+    targets:
+      - select:
+          kind: ConfigMap
+          name: platform-config
+        fieldPaths:
+          - data.keycloak-issuer-uri
+  - source:
+      kind: ConfigMap
+      name: runtime-config
+      fieldPath: data.PUBLIC_IP
+    targets:
+      - select:
+          kind: Deployment
+          name: api-gateway
+        fieldPaths:
+          - spec.template.spec.hostAliases.0.ip
+  - source:
+      kind: ConfigMap
+      name: runtime-config
+      fieldPath: data.DB_HOST
+    targets:
+      - select:
+          kind: Secret
+          name: cloud-db-secrets
+        fieldPaths:
+          - stringData.DB_HOST
+        options:
+          create: true
+  - source:
+      kind: ConfigMap
+      name: runtime-config
+      fieldPath: data.AUTH_HOST
+    targets:
+      - select:
+          kind: Deployment
+          name: api-gateway
+        fieldPaths:
+          - spec.template.spec.hostAliases.0.hostnames.0

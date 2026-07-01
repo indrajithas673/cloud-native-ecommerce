@@ -1,0 +1,78 @@
+---\napiVersion: batch/v1
+kind: Job
+metadata:
+  name: rds-init-job
+  namespace: default
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: mysql-init
+          image: mysql:8.0
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: DB_HOST
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: MYSQL_PASSWORD
+            - name: PRODUCT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: PRODUCT_DB_PASSWORD
+            - name: ORDER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: ORDER_DB_PASSWORD
+            - name: INVENTORY_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: INVENTORY_DB_PASSWORD
+            - name: NOTIFICATION_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: NOTIFICATION_DB_PASSWORD
+            - name: KEYCLOAK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: KEYCLOAK_PASSWORD
+          command:
+            - /bin/bash
+            - -c
+            - |
+              mysql -h "$DB_HOST" -u root -p"$MYSQL_ROOT_PASSWORD" <<EOF
+              CREATE DATABASE IF NOT EXISTS product_service;
+              CREATE DATABASE IF NOT EXISTS order_service;
+              CREATE DATABASE IF NOT EXISTS inventory_service;
+              CREATE DATABASE IF NOT EXISTS notification_service;
+              CREATE DATABASE IF NOT EXISTS keycloak;
+              
+              CREATE USER IF NOT EXISTS 'product_service_user'@'%' IDENTIFIED BY '${PRODUCT_DB_PASSWORD}';
+              GRANT ALL PRIVILEGES ON product_service.* TO 'product_service_user'@'%';
+              
+              CREATE USER IF NOT EXISTS 'order_service_user'@'%' IDENTIFIED BY '${ORDER_DB_PASSWORD}';
+              GRANT ALL PRIVILEGES ON order_service.* TO 'order_service_user'@'%';
+              
+              CREATE USER IF NOT EXISTS 'inventory_service_user'@'%' IDENTIFIED BY '${INVENTORY_DB_PASSWORD}';
+              GRANT ALL PRIVILEGES ON inventory_service.* TO 'inventory_service_user'@'%';
+              
+              CREATE USER IF NOT EXISTS 'notification_service_user'@'%' IDENTIFIED BY '${NOTIFICATION_DB_PASSWORD}';
+              GRANT ALL PRIVILEGES ON notification_service.* TO 'notification_service_user'@'%';
+              
+              CREATE USER IF NOT EXISTS 'keycloak_user'@'%' IDENTIFIED BY '${KEYCLOAK_PASSWORD}';
+              GRANT ALL PRIVILEGES ON keycloak.* TO 'keycloak_user'@'%';
+              
+              FLUSH PRIVILEGES;
+              EOF
+              echo "Database initialization completed successfully."
