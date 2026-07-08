@@ -1,0 +1,105 @@
+---\napiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+$patch: delete
+---\napiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+$patch: delete
+---\napiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: product-service
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              value: product_service_user
+              valueFrom:
+                $patch: delete
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: PRODUCT_DB_PASSWORD
+---\napiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: order-service
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              value: order_service_user
+              valueFrom:
+                $patch: delete
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: ORDER_DB_PASSWORD
+---\napiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: inventory-service
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              value: inventory_service_user
+              valueFrom:
+                $patch: delete
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: INVENTORY_DB_PASSWORD
+---\napiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: notification-service
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              value: notification_service_user
+              valueFrom:
+                $patch: delete
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: NOTIFICATION_DB_PASSWORD
+---\napiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  template:
+    spec:
+      containers:
+        - name: keycloak
+          env:
+            - name: KC_DB_USERNAME
+              value: keycloak_user
+              valueFrom:
+                $patch: delete
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloud-db-secrets
+                  key: KEYCLOAK_PASSWORD

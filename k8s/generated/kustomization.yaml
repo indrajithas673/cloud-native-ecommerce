@@ -1,0 +1,13 @@
+---\napiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+configMapGenerator:
+  - name: runtime-config
+    envs:
+      - runtime-values.env
+    behavior: create
+
+secretGenerator:
+  - name: cloud-db-secrets
+    envs:
+      - generated-secrets.env
+    behavior: create

@@ -1,0 +1,10 @@
+---\napiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+data:
+  kafka-bootstrap-servers: kafka:9092
+  keycloak-realm: spring-boot-microservices-realm
+  keycloak-issuer-uri: http://auth.13.61.61.209.nip.io/realms/spring-boot-microservices-realm
+  java-tool-options: "-Xmx256m -Xss512k"
+  zipkin-host: zipkin
