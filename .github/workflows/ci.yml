@@ -128,10 +128,10 @@ jobs:
           
           # Inject Amazon RDS configuration dynamically
           echo "mysql-host=${{ secrets.AWS_RDS_ENDPOINT }}" > rds-config.env
-          kustomize edit add configmap platform-config --behavior=merge --from-env-file=rds-config.env
+          kustomize edit add configmap platform-config --from-env-file=rds-config.env
           
           echo "mysql-app-password=${{ secrets.AWS_RDS_PASSWORD }}" > rds-secrets.env
-          kustomize edit add secret platform-secrets --behavior=merge --from-env-file=rds-secrets.env
+          kustomize edit add secret platform-secrets --from-env-file=rds-secrets.env
           
           cat kustomization.yaml
 
