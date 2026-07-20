@@ -126,9 +126,8 @@ jobs:
           kustomize edit set image local/inventory-service=${{ secrets.AWS_ECR_REGISTRY }}/inventory-service:${{ github.sha }}
           kustomize edit set image local/notification-service=${{ secrets.AWS_ECR_REGISTRY }}/notification-service:${{ github.sha }}
           
-          # Inject Amazon RDS configuration dynamically
-          echo "mysql-host=${{ secrets.AWS_RDS_ENDPOINT }}" > rds-config.env
-          kustomize edit add configmap platform-config --from-env-file=rds-config.env
+          echo "Injecting Amazon RDS configuration dynamically..."
+          sed -i "s/mysql-host: mysql/mysql-host: ${{ secrets.AWS_RDS_ENDPOINT }}/" ../../base/app-config.yaml
           
           echo "mysql-app-password=${{ secrets.AWS_RDS_PASSWORD }}" > rds-secrets.env
           kustomize edit add secret platform-secrets --from-env-file=rds-secrets.env
