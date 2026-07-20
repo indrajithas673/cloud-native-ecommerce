@@ -75,14 +75,6 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Debug OIDC Token
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const token = await core.getIDToken('sts.amazonaws.com');
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            console.log("OIDC Token Payload:", JSON.stringify(payload, null, 2));
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -100,7 +92,7 @@ jobs:
         run: |
           MODULES="product-service order-service inventory-service api-gateway notification-service"
           for module in $MODULES; do
-            mvn -B -pl "${module}" -am -DskipTests jib:build \
+            mvn -B -pl "${module}" -am -DskipTests compile jib:build \
               -Djib.to.image=${{ secrets.AWS_ECR_REGISTRY }}/${module}:${{ github.sha }}
           done
 
