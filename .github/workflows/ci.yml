@@ -119,7 +119,7 @@ jobs:
 
       - name: Update Kubernetes Manifests
         run: |
-          cd k8s/overlays/local
+          cd k8s/overlays/aws
           kustomize edit set image local/api-gateway=${{ secrets.AWS_ECR_REGISTRY }}/api-gateway:${{ github.sha }}
           kustomize edit set image local/product-service=${{ secrets.AWS_ECR_REGISTRY }}/product-service:${{ github.sha }}
           kustomize edit set image local/order-service=${{ secrets.AWS_ECR_REGISTRY }}/order-service:${{ github.sha }}
@@ -128,7 +128,7 @@ jobs:
           cat kustomization.yaml
 
       - name: Apply Manifests
-        run: kubectl apply -k k8s/overlays/local
+        run: kubectl apply -k k8s/overlays/aws
 
       - name: Wait for Rollout
         run: |
