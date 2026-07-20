@@ -15,3 +15,4 @@ data:
   keycloak-admin-user: admin
   keycloak-realm: spring-boot-microservices-realm
   keycloak-issuer-uri: http://auth.invalid/realms/spring-boot-microservices-realm
+  java-tool-options: "-Xmx256m -Xss512k"
