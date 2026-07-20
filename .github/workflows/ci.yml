@@ -130,6 +130,9 @@ jobs:
           sed -i "s/mysql-host: mysql/mysql-host: ${{ secrets.AWS_RDS_ENDPOINT }}/" ../../base/app-config.yaml
           
           echo "mysql-app-password=${{ secrets.AWS_RDS_PASSWORD }}" > rds-secrets.env
+          echo "mysql-root-password=${{ secrets.AWS_RDS_PASSWORD }}" >> rds-secrets.env
+          echo "keycloak-db-password=${{ secrets.AWS_RDS_PASSWORD }}" >> rds-secrets.env
+          echo "keycloak-admin-password=admin" >> rds-secrets.env
           kustomize edit add secret platform-secrets --from-env-file=rds-secrets.env
           
           cat kustomization.yaml

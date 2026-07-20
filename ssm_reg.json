@@ -1,0 +1,1 @@
+{"DocumentName": "AWS-RunShellScript", "Targets": [{"Key": "InstanceIds", "Values": ["i-014c9dfdbd25c69f4"]}], "Parameters": {"commands": ["cat /etc/rancher/k3s/registries.yaml || true"]}}
