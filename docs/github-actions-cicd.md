@@ -1,3 +1,10 @@
+---
+Version: 1.0.0
+Status: FINAL
+Release State: Frozen
+Last Validation Date: 2026-07-20
+---
+
 # GitHub Actions CI/CD
 
 ## Workflow
@@ -70,3 +77,4 @@ kubectl -n micro-marketplace rollout undo deployment/order-service
 kubectl -n micro-marketplace rollout undo deployment/inventory-service
 kubectl -n micro-marketplace rollout undo deployment/notification-service
 ```
+
