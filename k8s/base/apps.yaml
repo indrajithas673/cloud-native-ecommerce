@@ -23,6 +23,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: JAVA_TOOL_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: java-tool-options
             - name: SERVER_PORT
               value: "8080"
             - name: PRODUCT_SERVICE_URL
@@ -93,6 +98,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: JAVA_TOOL_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: java-tool-options
             - name: SERVER_PORT
               value: "8080"
             - name: DB_HOST
@@ -176,6 +186,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: JAVA_TOOL_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: java-tool-options
             - name: SERVER_PORT
               value: "8080"
             - name: DB_HOST
@@ -264,6 +279,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: JAVA_TOOL_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: java-tool-options
             - name: SERVER_PORT
               value: "8080"
             - name: DB_HOST
@@ -347,6 +367,11 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: JAVA_TOOL_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: java-tool-options
             - name: SERVER_PORT
               value: "8080"
             - name: DB_HOST
