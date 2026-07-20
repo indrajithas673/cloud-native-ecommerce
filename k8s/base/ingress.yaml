@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: traefik
 spec:
   rules:
-    - host: api.invalid
+    - host: api.13.61.61.209.nip.io
       http:
         paths:
           - path: /
@@ -16,7 +16,7 @@ spec:
                 name: api-gateway
                 port:
                   number: 80
-    - host: auth.invalid
+    - host: auth.13.61.61.209.nip.io
       http:
         paths:
           - path: /
