@@ -95,8 +95,18 @@ spec:
           env:
             - name: SERVER_PORT
               value: "8080"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-port
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://mysql:3306/product_service?allowPublicKeyRetrieval=true&useSSL=false
+              value: jdbc:mysql://$(DB_HOST):$(DB_PORT)/product_service?allowPublicKeyRetrieval=true&useSSL=false
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:
@@ -168,8 +178,18 @@ spec:
           env:
             - name: SERVER_PORT
               value: "8080"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-port
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://mysql:3306/order_service?allowPublicKeyRetrieval=true&useSSL=false
+              value: jdbc:mysql://$(DB_HOST):$(DB_PORT)/order_service?allowPublicKeyRetrieval=true&useSSL=false
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:
@@ -246,8 +266,18 @@ spec:
           env:
             - name: SERVER_PORT
               value: "8080"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-port
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://mysql:3306/inventory_service?allowPublicKeyRetrieval=true&useSSL=false
+              value: jdbc:mysql://$(DB_HOST):$(DB_PORT)/inventory_service?allowPublicKeyRetrieval=true&useSSL=false
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:
@@ -319,8 +349,18 @@ spec:
           env:
             - name: SERVER_PORT
               value: "8080"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: mysql-port
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://mysql:3306/notification_service?allowPublicKeyRetrieval=true&useSSL=false
+              value: jdbc:mysql://$(DB_HOST):$(DB_PORT)/notification_service?allowPublicKeyRetrieval=true&useSSL=false
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:

@@ -41,6 +41,7 @@ public class OrderService {
                 .toList();
     }
 
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "inventory", fallbackMethod = "fallbackMethod")
     public String placeOrder(OrderRequest orderRequest) {
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
@@ -90,6 +91,10 @@ public class OrderService {
         } catch (WebClientResponseException e) {
             throw new IllegalArgumentException("Product is not in stock or insufficient quantity, please try again later");
         }
+    }
+
+    public String fallbackMethod(OrderRequest orderRequest, Throwable throwable) {
+        return "Oops! Something went wrong, please try again later. Inventory service is currently unavailable.";
     }
 
     private OrderLineItems mapToDto(OrderLineItemsDto orderLineItemsDto) {
