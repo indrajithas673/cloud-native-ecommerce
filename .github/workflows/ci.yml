@@ -142,11 +142,11 @@ jobs:
 
       - name: Wait for Rollout
         run: |
-          kubectl rollout status deployment/api-gateway -n micro-marketplace --timeout=120s
-          kubectl rollout status deployment/product-service -n micro-marketplace --timeout=120s
-          kubectl rollout status deployment/order-service -n micro-marketplace --timeout=120s
-          kubectl rollout status deployment/inventory-service -n micro-marketplace --timeout=120s
-          kubectl rollout status deployment/notification-service -n micro-marketplace --timeout=120s
+          kubectl rollout status deployment/api-gateway -n default --timeout=120s
+          kubectl rollout status deployment/product-service -n default --timeout=120s
+          kubectl rollout status deployment/order-service -n default --timeout=120s
+          kubectl rollout status deployment/inventory-service -n default --timeout=120s
+          kubectl rollout status deployment/notification-service -n default --timeout=120s
 
   post-deployment-smoke-test:
     name: Post-Deployment Smoke Test
