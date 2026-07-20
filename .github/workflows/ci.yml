@@ -75,12 +75,6 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::889812257815:role/github-actions-deploy-role
-          aws-region: ${{ secrets.AWS_REGION }}
-
       - name: Debug OIDC Token
         uses: actions/github-script@v6
         with:
@@ -88,6 +82,12 @@ jobs:
             const token = await core.getIDToken('sts.amazonaws.com');
             const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
             console.log("OIDC Token Payload:", JSON.stringify(payload, null, 2));
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::889812257815:role/github-actions-deploy-role
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Verify AWS Identity
         run: aws sts get-caller-identity
