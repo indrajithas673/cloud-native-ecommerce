@@ -2,59 +2,56 @@
 
 ## Workflow
 
-The pipeline is defined in [`.github/workflows/ci-cd.yml`](../.github/workflows/ci-cd.yml).
+The pipeline is defined in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
 It does the following:
 
-1. Builds all Maven modules and runs tests with `mvn clean verify`
-2. Builds and pushes Docker images for:
-   - `product-service`
-   - `order-service`
-   - `inventory-service`
-   - `api-gateway`
-   - `notification-service`
-3. Generates the runtime Kustomize values file from the EC2 public IP
-4. Copies the `k8s/` manifests to the EC2 server
-5. Connects over SSH
-6. Creates or updates Kubernetes secrets from GitHub Secrets
-7. Applies the k3s manifests
-8. Updates the Spring service deployment images to the current Git SHA tag
-9. Waits for rollout completion
+1. **Validate Infrastructure**: Runs `kubectl kustomize` to validate manifests and validates Docker Compose config.
+2. **Build & Test**: Builds all Maven modules and runs tests with `mvn clean verify`.
+3. **Build & Push Docker Images**: 
+   - Authenticates to AWS via **OIDC (OpenID Connect)**.
+   - Builds and pushes Docker images to Amazon ECR for:
+     - `product-service`
+     - `order-service`
+     - `inventory-service`
+     - `api-gateway`
+     - `notification-service`
+4. **Deploy to K3s**:
+   - Uses `KUBECONFIG_DATA` to authenticate to the remote K3s cluster.
+   - Updates the Spring service deployment images to the current Git SHA tag using Kustomize.
+   - Applies the k3s manifests via `kubectl apply -k`.
+   - Waits for rollout completion.
+5. **Post-Deployment Smoke Test**:
+   - Generates an OAuth2 token from Keycloak.
+   - Hits the `api-gateway` endpoint to verify the deployment is functional.
+
+## AWS OIDC Authentication Model
+
+To maximize security, this pipeline does **not** use long-lived AWS IAM Access Keys. Instead, it uses **OpenID Connect (OIDC)** to request short-lived, temporary credentials from AWS during the workflow run.
+
+### IAM Role
+The workflow assumes the AWS IAM role: `arn:aws:iam::889812257815:role/github-actions-deploy-role`.
+
+This role has a strict **Trust Policy** that restricts access to:
+- `audience`: `sts.amazonaws.com`
+- `repository`: `indrajithas673/cloud-native-ecommerce`
+- `branch`: `refs/heads/main`
+
+This ensures that only pushes to the `main` branch of this specific repository can trigger deployments.
+
+### IAM Policy
+The IAM role is attached to a custom, least-privilege policy (`github-actions-ecr-least-privilege`) that only grants the specific `ecr:` permissions required to authenticate and push images to Amazon ECR.
 
 ## Required GitHub Secrets
 
-Repository or environment secrets required by the workflow:
+Repository secrets required by the workflow:
 
-- `DOCKERHUB_USERNAME`
-- `DOCKERHUB_TOKEN`
-- `EC2_PUBLIC_IP`
-- `EC2_SSH_USER`
-- `EC2_SSH_PRIVATE_KEY`
-- `MYSQL_ROOT_PASSWORD`
-- `MYSQL_APP_PASSWORD`
-- `KEYCLOAK_DB_PASSWORD`
-- `KEYCLOAK_ADMIN_PASSWORD`
+- `KUBECONFIG_DATA`: Base64-encoded kubeconfig file for authenticating to the K3s cluster.
+- `KEYCLOAK_CLIENT_SECRET`: Client secret for the `spring-cloud-client` used in smoke tests.
+- `AWS_REGION`: The AWS region (e.g., `ap-south-1`).
+- `AWS_ECR_REGISTRY`: The ECR registry URI (e.g., `889812257815.dkr.ecr.ap-south-1.amazonaws.com`).
 
-Recommended values:
-
-- `EC2_SSH_USER`: `ubuntu`
-- `EC2_PUBLIC_IP`: the Elastic IP of the Terraform-managed EC2 instance
-- `EC2_SSH_PRIVATE_KEY`: the private key matching the EC2 key pair
-
-## Deployment instructions
-
-1. Create the Docker Hub repository namespace under your Docker Hub account.
-2. Add the GitHub Secrets listed above.
-3. Make sure the EC2 instance already has k3s installed and is reachable over SSH.
-4. Push to `main`, or run the workflow manually from the GitHub Actions tab.
-5. Watch the `deploy` job until all rollout checks pass.
-
-After deployment, validate:
-
-```bash
-kubectl -n micro-marketplace get pods
-kubectl -n micro-marketplace get ingress
-```
+*(Note: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` are explicitly not used and should not be stored in GitHub Secrets.)*
 
 ## Rollback strategy
 
@@ -72,14 +69,4 @@ kubectl -n micro-marketplace rollout undo deployment/product-service
 kubectl -n micro-marketplace rollout undo deployment/order-service
 kubectl -n micro-marketplace rollout undo deployment/inventory-service
 kubectl -n micro-marketplace rollout undo deployment/notification-service
-```
-
-Then verify:
-
-```bash
-kubectl -n micro-marketplace rollout status deployment/api-gateway
-kubectl -n micro-marketplace rollout status deployment/product-service
-kubectl -n micro-marketplace rollout status deployment/order-service
-kubectl -n micro-marketplace rollout status deployment/inventory-service
-kubectl -n micro-marketplace rollout status deployment/notification-service
 ```
