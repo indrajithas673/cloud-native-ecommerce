@@ -1,110 +1,126 @@
 <div align="center">
   <img src="docs/images/banner.png" alt="Cloud-Native Micro Marketplace Banner" width="100%"/>
   
-# 🛒 Cloud-Native Micro Marketplace
-**A Production-Ready, Event-Driven E-Commerce Platform**
+# 🛒 Cloud-Native E-Commerce Platform
+**A Microservices-based E-Commerce Backend built for scalability and learning.**
 
-[![CI](https://github.com/indrajithas673/cloud-native-ecommerce/actions/workflows/ci.yml/badge.svg)](https://github.com/indrajithas673/cloud-native-ecommerce/actions/workflows/ci.yml)
-[![Java 17](https://img.shields.io/badge/Java-17-blue.svg)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
-[![Spring Boot 3.x](https://img.shields.io/badge/Spring_Boot-3.x-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-blue?logo=kubernetes)](https://k3s.io/)
-[![AWS](https://img.shields.io/badge/AWS-EC2%20%7C%20RDS-orange?logo=amazon-aws)](https://aws.amazon.com/)
-[![Terraform](https://img.shields.io/badge/Terraform-IaC-purple?logo=terraform)](https://www.terraform.io/)
+[![CI Pipeline](https://github.com/indrajithas673/cloud-native-ecommerce/actions/workflows/ci.yml/badge.svg)](https://github.com/indrajithas673/cloud-native-ecommerce/actions/workflows/ci.yml)
+[![Java 17](https://img.shields.io/badge/Java-17-007396.svg?logo=java&logoColor=white)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
+[![Spring Boot 3.x](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F.svg?logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Event_Driven-231F20.svg?logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-326ce5?logo=kubernetes&logoColor=white)](https://k3s.io/)
+[![AWS Infrastructure](https://img.shields.io/badge/AWS-Cloud-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
 
-*Designed for extreme scalability, fault tolerance, and comprehensive observability.*
-
+*Built to demonstrate microservices architecture, event-driven communication, and cloud deployments.*
 </div>
 
 ---
 
 ## 📖 Project Overview
 
-**Micro Marketplace** is a comprehensive, production-ready e-commerce system built from the ground up using a modern microservices architecture. It demonstrates advanced cloud-native patterns including **Event-Driven Architecture (EDA)**, **Circuit Breaking**, **Distributed Tracing**, and **Infrastructure as Code (IaC)**.
+### What is this?
+This is a backend for an e-commerce platform built using a microservices architecture. It handles core e-commerce functionalities like managing products, processing orders, updating inventory, and sending notifications. 
 
-The system securely processes orders, tracks inventory, and emits asynchronous notifications—all deployed automatically to an AWS Kubernetes cluster via an OIDC-federated GitHub Actions pipeline.
+### Why was it built?
+I built this project to transition from building simple monolithic applications to understanding how large-scale distributed systems work in the real world. The goal was to get hands-on experience with inter-service communication, asynchronous messaging, and container orchestration.
+
+### How does it work?
+The system is divided into focused microservices:
+- **API Gateway**: The single entry point for all client requests. It routes traffic and enforces security.
+- **Product Service**: Manages the catalog of products.
+- **Order Service**: Handles customer orders and triggers inventory checks.
+- **Inventory Service**: Manages stock levels and ensures products are available before confirming an order.
+- **Notification Service**: Listens for successful orders and simulates sending email/SMS confirmations.
+- **Keycloak**: Handles user authentication and issues JSON Web Tokens (JWT).
+- **Apache Kafka**: Acts as the message broker for asynchronous communication between services.
+- **Amazon RDS**: Hosts the relational database for persistent storage.
+- **Kubernetes (K3s)**: Orchestrates the Docker containers on an AWS EC2 instance.
 
 ---
 
-## ✨ Key Capabilities
+## ✨ Features
 
-- 🏗️ **Domain-Driven Design**: Strictly segregated microservices (Product, Order, Inventory, Notification).
-- 🛡️ **Edge Security**: Centralized API Gateway with OAuth2 & Keycloak JWT validation.
-- ⚡ **Asynchronous Messaging**: KRaft-mode Apache Kafka for resilient, decoupled inter-service communication.
-- 📈 **Full Observability Stack**: End-to-end distributed tracing via Zipkin, with metrics aggregated in Prometheus and visualized in Grafana.
-- 🛡️ **Graceful Degradation**: Resilience4j circuit breakers prevent cascading failures during downstream outages.
-- ☁️ **Cloud-Native Deployment**: AWS EC2 K3s Cluster, Amazon RDS, and AWS OIDC integration.
-- 🚀 **Zero-Touch CI/CD**: Automated deployment pipeline using GitHub Actions, Jib, and Kustomize.
+- **Product Management**: APIs to create, read, update, and delete products.
+- **Order Processing**: Securely place orders with automatic inventory validation.
+- **Inventory Updates**: Real-time stock deduction upon order placement.
+- **Event-Driven Notifications**: Asynchronous processing using Kafka so the Order Service doesn't wait for notifications to send.
+- **JWT Authentication**: Secured endpoints using OAuth2 and Keycloak.
+- **REST APIs**: Standardized communication between the frontend (client) and the gateway.
+- **Containerized Deployment**: Every service is packaged as a Docker image.
+- **Infrastructure as Code**: AWS infrastructure provisioned entirely via Terraform.
+- **CI/CD**: Automated testing and deployment to Kubernetes using GitHub Actions.
+
+---
+
+## 📸 Screenshots & Observability
+
+*(Distributed tracing and metrics dashboards implemented in this project)*
+
+<div align="center">
+  <img src="docs/images/outputs/zipkin_ui.png" alt="Zipkin Distributed Tracing" width="48%"/>
+  <img src="docs/images/outputs/grafana_dashboard_collapsed.png" alt="Grafana Metrics" width="48%"/>
+</div>
+
+---
+
+## 🏗️ Architecture & Request Flow
+
+<div align="center">
+  <img src="docs/images/architecture/SolutionArchitecture.png" alt="Solution Architecture" width="800"/>
+</div>
+
+### How a Request Flows Through the System:
+1. **Client** sends an HTTP request (e.g., "Place Order") with a JWT token.
+2. **API Gateway** intercepts the request, validates the JWT with **Keycloak**, and forwards it.
+3. The **Order Service** receives the request and makes a synchronous HTTP call to the **Inventory Service** to check stock.
+4. If in stock, the **Order Service** saves the order to **Amazon RDS** and publishes an "OrderPlacedEvent" to **Kafka**.
+5. The **Notification Service** consumes the event from **Kafka** and processes the notification asynchronously.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Category | Technologies Used |
+| Category | Technology |
 | :--- | :--- |
-| **Core Framework** | `Java 17`, `Spring Boot 3.x`, `Spring Cloud` |
-| **API Gateway** | `Spring Cloud Gateway` |
-| **Identity & Security** | `Keycloak`, `OAuth2`, `JWT` |
-| **Data Persistence** | `Amazon RDS (MySQL 8.4)`, `Spring Data JPA` |
-| **Event Streaming** | `Apache Kafka (KRaft mode)` |
-| **Resilience** | `Resilience4j` (Circuit Breakers, Timeouts, Retry) |
-| **Observability** | `Micrometer`, `Zipkin`, `Prometheus`, `Grafana` |
-| **Infrastructure (IaC)**| `Terraform`, `AWS EC2`, `K3s`, `Kubernetes (Kustomize)` |
-| **CI/CD Pipeline** | `GitHub Actions`, `Amazon ECR`, `AWS OIDC` |
+| **Backend Framework** | Java 17, Spring Boot 3.1, Spring Cloud |
+| **Security** | Keycloak, OAuth2, JWT |
+| **Message Broker** | Apache Kafka (KRaft mode) |
+| **Database** | Amazon RDS (MySQL 8.4), Spring Data JPA |
+| **Observability** | Micrometer, Zipkin, Prometheus, Grafana |
+| **Infrastructure** | Terraform, AWS EC2, K3s Kubernetes |
+| **CI/CD** | GitHub Actions, Jib, Kustomize |
 
 ---
 
-## 🏗️ High-Level Architecture
+## 🤔 Why These Technologies?
 
-The architecture enforces strict separation of concerns, ensuring high availability and secure request routing.
-
-<div align="center">
-  <img src="docs/images/architecture/SolutionArchitecture.png" alt="Solution Architecture" width="850"/>
-</div>
-
-> 🔍 **Deep Dive:** Explore the full request flow, Kafka event topologies, and Keycloak authentication sequences in the [System Architecture Document](docs/ARCHITECTURE.md).
-
----
-
-## 📚 Comprehensive Documentation
-
-The repository is thoroughly documented to assist with onboarding, architectural review, and operational troubleshooting.
-
-| Documentation Area | Description | Link |
-| :--- | :--- | :--- |
-| **System Design** | Detailed diagrams and microservice responsibilities. | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| **Infrastructure & CI/CD** | Terraform AWS setup, K3s cluster, and GitHub Actions. | [DEPLOYMENT.md](docs/DEPLOYMENT.md) |
-| **REST API Reference** | Complete endpoint payloads, Auth requirements, and examples. | [API.md](docs/API.md) |
-| **Security Architecture**| Keycloak integration, AWS OIDC, and K8s secret management. | [SECURITY.md](docs/SECURITY.md) |
-| **Local Development** | Docker-compose setup, environment variables, and Jib builds. | [DEVELOPMENT.md](docs/DEVELOPMENT.md) |
-| **Troubleshooting Guide**| Verified resolutions for `CrashLoopBackOff`, Kafka, and RDS. | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) |
-| **Quality Audit** | Verification of repository cleanliness and standards. | [REPOSITORY_AUDIT.md](docs/REPOSITORY_AUDIT.md) |
-| **Release History** | Version logs and feature enhancements. | [CHANGELOG.md](CHANGELOG.md) |
+- **Why Spring Boot?** It provides excellent out-of-the-box support for microservices (Spring Cloud) and dependency injection, making development fast and structured.
+- **Why Kafka?** Direct HTTP calls between all services create tight coupling and cascading failures. Kafka allows the Order Service to just say "Order Placed" and move on, while the Notification service handles it at its own pace.
+- **Why Keycloak?** Instead of writing custom login and token generation logic from scratch, Keycloak provides an industry-standard Identity and Access Management solution.
+- **Why Amazon RDS?** A managed database takes away the headache of manual backups and scaling, allowing me to focus on application logic.
+- **Why K3s instead of EKS?** AWS EKS is expensive and complex for a student project. K3s is a lightweight, fully compliant Kubernetes distribution that runs perfectly on a single EC2 instance.
+- **Why Terraform?** Creating AWS resources manually via the console is error-prone and hard to replicate. Terraform allows me to define my infrastructure in code so it can be spun up or destroyed with one command.
 
 ---
 
-## 🚀 Quick Start (Local Setup)
+## 🚧 Challenges Faced & Lessons Learned
 
-Want to spin up the entire microservices ecosystem locally? 
+1. **Kafka Configuration**: Initially, I struggled with Zookeeper setup. I resolved this by moving to Kafka's newer KRaft mode, which removes the Zookeeper dependency and simplifies the architecture.
+2. **Kubernetes `CrashLoopBackOff`**: My services kept crashing in K8s because they were trying to connect to the database before RDS was fully ready. I solved this by adding readiness and liveness probes in my deployment manifests.
+3. **Keycloak Integration**: Configuring Spring Security to act as an OAuth2 Resource Server and properly decode Keycloak JWTs took significant debugging of the `application.yml` issuer URIs.
+4. **CI/CD Pipeline**: Automating the deployment meant dealing with AWS credentials. I learned how to set up AWS OIDC (OpenID Connect) so GitHub Actions could securely deploy to my EC2 instance without storing long-lived secret keys.
 
-1. **Clone & Configure**
-   ```bash
-   git clone https://github.com/indrajithas673/cloud-native-ecommerce.git
-   cd cloud-native-ecommerce
-   cp .env.example .env
-   ```
-2. **Launch Infrastructure & Services**
-   ```bash
-   docker-compose up -d
-   ```
-3. **Access the Application**
-   - **API Gateway**: `http://api.127.0.0.1.nip.io`
-   - **Keycloak Admin**: `http://localhost:8080`
-   - **Zipkin Tracing**: `http://localhost:9411`
-   - **Grafana Dashboards**: `http://localhost:3000`
+---
 
-> 📖 See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for full instructions on building Docker images, configuring Keycloak, and running end-to-end tests locally.
+## 📚 Detailed Documentation
+
+If you want to dive deeper into the implementation details, check out these docs:
+- [System Architecture](docs/ARCHITECTURE.md)
+- [Infrastructure & Deployment Guide](docs/DEPLOYMENT.md)
+- [API Reference](docs/API.md)
+- [Local Development Setup](docs/DEVELOPMENT.md)
 
 ---
 <div align="center">
-  <i>Developed and maintained for demonstration of advanced Cloud-Native engineering principles.</i>
+  <i>A final-year engineering project demonstrating practical cloud-native backend development.</i>
 </div>

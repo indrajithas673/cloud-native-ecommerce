@@ -1,4 +1,4 @@
----\nservices:
+services:
   # MySQL Config for order service
   mysql-order:
     container_name: mysql-order

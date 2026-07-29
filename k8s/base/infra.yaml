@@ -1,4 +1,4 @@
----\napiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kafka
@@ -78,7 +78,8 @@ spec:
         - name: kafka-data
           persistentVolumeClaim:
             claimName: kafka-pvc
----\napiVersion: v1
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: kafka
@@ -89,7 +90,8 @@ spec:
     - name: kafka
       port: 9092
       targetPort: 9092
----\napiVersion: apps/v1
+---
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: keycloak
@@ -176,7 +178,8 @@ spec:
         - name: keycloak-realm
           configMap:
             name: keycloak-realm-import
----\napiVersion: v1
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: keycloak
@@ -187,7 +190,8 @@ spec:
     - name: http
       port: 8080
       targetPort: 8080
----\napiVersion: apps/v1
+---
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: zipkin
@@ -208,7 +212,8 @@ spec:
           image: openzipkin/zipkin:latest
           ports:
             - containerPort: 9411
----\napiVersion: v1
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: zipkin

@@ -1,4 +1,4 @@
----\napiVersion: apps/v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
@@ -36,7 +36,8 @@ spec:
         - name: mysql-init
           configMap:
             name: mysql-init-config
----\napiVersion: v1
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: mysql
@@ -46,7 +47,8 @@ spec:
   ports:
     - port: 3306
       targetPort: 3306
----\napiVersion: v1
+---
+apiVersion: v1
 kind: ConfigMap
 metadata:
   name: mysql-init-config
