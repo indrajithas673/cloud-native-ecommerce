@@ -119,10 +119,11 @@ jobs:
           KUBECONFIG_DATA: ${{ secrets.KUBECONFIG_DATA }}
         run: |
           mkdir -p ~/.kube
-          if echo "$KUBECONFIG_DATA" | grep -q "apiVersion:"; then
-            echo "$KUBECONFIG_DATA" > ~/.kube/config
+          DECODED=$(echo "$KUBECONFIG_DATA" | base64 -di 2>/dev/null || true)
+          if echo "$DECODED" | grep -q "apiVersion"; then
+            echo "$DECODED" > ~/.kube/config
           else
-            echo "$KUBECONFIG_DATA" | base64 -d > ~/.kube/config
+            echo "$KUBECONFIG_DATA" > ~/.kube/config
           fi
           chmod 600 ~/.kube/config
 
