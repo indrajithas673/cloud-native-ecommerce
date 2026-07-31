@@ -15,19 +15,22 @@
 
 ---
 
-### ✨ Project Highlights
-* **Event-Driven Architecture**: Decoupled services using Apache Kafka.
-* **Transactional Outbox**: Guaranteed data consistency without dual-write issues.
-* **Circuit Breakers**: Prevented cascading failures using Resilience4j.
-* **Secure API Gateway**: Centralized OAuth2/JWT validation via Keycloak.
-* **Infrastructure as Code**: 100% automated AWS provisioning with Terraform.
-* **Automated CI/CD**: Seamless GitHub Actions deployments using secure AWS OIDC.
+## 🌟 Why This Project Stands Out
+
+- **Event-Driven Architecture**: Decoupled services using Apache Kafka.
+- **Transactional Outbox**: Guaranteed data consistency across distributed databases.
+- **Circuit Breakers**: Prevented cascading system failures using Resilience4j.
+- **Kubernetes**: Orchestrated containers with K3s for automatic healing and secrets management.
+- **Terraform**: Codified 100% of the AWS infrastructure.
+- **GitHub Actions**: Fully automated CI/CD pipeline from commit to deployment.
+- **AWS OIDC**: Secured deployments without long-lived IAM keys.
+- **Keycloak**: Centralized OAuth2/JWT security at the API Gateway layer.
 
 ---
 
-## 🎯 Motivation
+## 📊 Project Metrics
 
-I built this project to transition from writing simple monolithic applications to tackling the real-world complexities of distributed systems. E-commerce platforms handle unpredictable traffic and require strict data consistency. This project demonstrates how to decouple services to prevent cascading failures, how to safely publish events without losing data, and how to automate the entire infrastructure and deployment lifecycle in the cloud.
+> 5 Spring Boot Microservices | 1 API Gateway | Apache Kafka | Amazon RDS | Kubernetes (K3s) | Terraform Infrastructure | GitHub Actions CI/CD | OAuth2 Authentication | Event-driven Communication | Distributed Tracing
 
 ---
 
@@ -38,34 +41,53 @@ I built this project to transition from writing simple monolithic applications t
 </div>
 
 ### Request Flow
-1. **Client** sends an HTTP request with a valid JWT.
-2. **API Gateway** intercepts, validates the JWT signature with Keycloak, and routes the request.
-3. The **Order Service** receives the request and makes a synchronous call to the **Inventory Service** to verify stock.
-4. The **Order Service** saves the order to **Amazon RDS** and atomically saves an event to its Outbox table.
-5. The Outbox scheduler publishes the event to **Kafka**.
-6. The **Notification Service** asynchronously consumes the event and processes the user notification.
+Client
+↓
+API Gateway
+↓
+Keycloak
+↓
+Order Service
+↓
+Amazon RDS
+↓
+Kafka
+↓
+Notification Service
 
 ---
 
-## 💡 Key Engineering Decisions
+## 💡 Engineering Decisions
 
 **Transactional Outbox**  
-Writing to a database and publishing to a message broker are two separate operations; if Kafka crashes after the database saves, the event is permanently lost. I implemented the Transactional Outbox pattern to guarantee consistency by saving the order and the Kafka event in a single database transaction. 
+*Problem:* Saving an order to a database and publishing an event to Kafka are two distinct operations. If Kafka crashes immediately after the database saves, the event is permanently lost (the Dual-Write problem).  
+*Solution:* Save the Order entity and an Outbox event entity in the same atomic database transaction. A separate scheduler polls the Outbox table and publishes to Kafka.  
+*Benefit:* Guarantees at-least-once delivery without data loss.
 
 **Circuit Breaker**  
-If the Inventory Service goes down, the Order Service could run out of threads waiting for a response, causing the entire system to crash. I used Resilience4j to fail fast and return a clean fallback response ("Inventory service is currently unavailable") to preserve overall system stability.
+*Problem:* If the Inventory Service goes down, the Order Service could run out of threads waiting for a response, causing the entire system to crash.  
+*Solution:* Implemented Resilience4j to fail fast after a timeout and return a clean fallback response ("Inventory service is currently unavailable").  
+*Benefit:* Preserves overall system stability and prevents cascading failures.
 
 **Kafka**  
-Synchronous HTTP calls create tight coupling. Kafka was used to decouple the critical path (placing an order) from non-critical tasks (sending emails), allowing the Notification Service to process events at its own pace or catch up if it restarts.
+*Problem:* Synchronous HTTP calls between all services create tight coupling and slow response times.  
+*Solution:* Used Apache Kafka to decouple the critical path (placing an order) from non-critical tasks (sending emails).  
+*Benefit:* Allows the Notification Service to process events asynchronously or catch up if it restarts without impacting user checkout speed.
 
 **Terraform**  
-Clicking through the AWS console is error-prone. I provisioned the AWS VPC, EC2 instance, and Amazon RDS database using Terraform so the environment is perfectly reproducible and version-controlled.
+*Problem:* Provisioning cloud infrastructure manually via a UI is slow, error-prone, and difficult to reproduce.  
+*Solution:* Codified the AWS VPC, Subnets, EC2 instance, Security Groups, and Amazon RDS instance using Terraform.  
+*Benefit:* Ensures the entire infrastructure is version-controlled and can be destroyed or recreated with a single command.
 
 **GitHub Actions + AWS OIDC**  
-Storing long-lived AWS IAM access keys in GitHub Secrets is a security risk. I secured the CI/CD pipeline by using OpenID Connect (OIDC) to issue temporary, strictly scoped credentials just in time for deployment.
+*Problem:* Storing long-lived AWS IAM access keys in GitHub Secrets is a major security risk if compromised.  
+*Solution:* Configured OpenID Connect (OIDC) between GitHub and AWS.  
+*Benefit:* GitHub Actions assumes a strictly scoped, temporary IAM role just in time for deployment, eliminating the need for hardcoded credentials.
 
 **Kubernetes (K3s)**  
-AWS EKS is expensive and complex for a learning project. I used K3s to orchestrate containers, manage secrets, and ensure automatic service restarts, providing standard Kubernetes primitives on a single affordable EC2 instance.
+*Problem:* Managing raw Docker containers manually on an EC2 instance makes updates and secrets management difficult. AWS EKS is too expensive for a learning project.  
+*Solution:* Deployed K3s, a lightweight, CNCF-certified Kubernetes distribution, directly onto the EC2 instance.  
+*Benefit:* Provides the full power of Kubernetes (Deployments, Services, automated restarts) without the heavy cloud bill.
 
 ---
 
@@ -77,41 +99,49 @@ AWS EKS is expensive and complex for a learning project. I used K3s to orchestra
 | **Security** | Keycloak, OAuth2, JWT |
 | **Messaging** | Apache Kafka (KRaft mode) |
 | **Database** | Amazon RDS (MySQL 8.0), Spring Data JPA, Flyway |
-| **Observability** | Micrometer, Zipkin, Prometheus, Grafana |
-| **Infrastructure** | Terraform, AWS EC2, K3s (Kubernetes) |
+| **Cloud** | AWS (EC2, RDS, VPC, ECR, IAM) |
+| **Infrastructure** | Terraform, Kubernetes (K3s) |
 | **DevOps** | GitHub Actions, AWS OIDC, Jib, Kustomize |
+| **Monitoring** | Micrometer, Zipkin, Prometheus, Grafana |
 
 ---
 
 ## 📁 Repository Structure
-- `api-gateway`: Spring Cloud Gateway application serving as the single entry point.
-- `product-service`: Manages the product catalog.
-- `order-service`: Core service handling transactions and Outbox publishing.
-- `inventory-service`: Manages stock levels atomically.
-- `notification-service`: Kafka consumer that processes asynchronous events.
-- `terraform`: IaC files provisioning the AWS environment.
-- `k8s`: Kubernetes manifests managed with Kustomize.
-- `.github/workflows`: Automated CI/CD pipeline definitions.
+
+```text
+.
+├── api-gateway/           # Spring Cloud Gateway handling routing and OAuth2 validation
+├── product-service/       # Microservice managing the product catalog
+├── order-service/         # Core microservice managing orders and Outbox publishing
+├── inventory-service/     # Microservice managing stock levels atomically
+├── notification-service/  # Kafka consumer that processes asynchronous events
+├── terraform/             # IaC files provisioning the AWS environment
+├── k8s/                   # Kubernetes manifests managed with Kustomize
+├── docs/                  # Architecture diagrams and deep-dive documentation
+└── .github/               # GitHub Actions CI/CD pipeline definitions
+```
+
+---
+
+## ⚙️ System Design Highlights
+- **API Gateway Pattern**: Single entry point handling cross-cutting concerns like security.
+- **Event-Driven Architecture**: Asynchronous communication for non-critical paths.
+- **Transactional Outbox**: Atomic database operations to prevent message loss.
+- **Circuit Breaker**: Fault tolerance for synchronous inter-service calls.
+- **Infrastructure as Code**: Declarative cloud resource provisioning.
+- **OAuth2 Security**: Centralized identity management via Keycloak.
+- **Container Orchestration**: Declarative deployment and self-healing pods.
 
 ---
 
 ## 🚀 Features
 - Centralized API routing with JWT validation.
-- Synchronous inter-service communication with Circuit Breakers.
-- Asynchronous messaging for event-driven workflows.
+- Synchronous inter-service communication with fallback mechanisms.
+- Asynchronous messaging for email notifications.
+- Reliable event publishing without dual-write inconsistencies.
 - Distributed tracing across HTTP and messaging boundaries.
-- Fully automated IaC provisioning and CI/CD pipelines.
-
----
-
-## 📊 Observability
-
-Because distributed systems are difficult to debug, I implemented comprehensive tracing and metrics. Every request is tagged with a trace ID that flows through the Gateway, into the internal services, and across Kafka.
-
-<div align="center">
-  <img src="docs/images/outputs/grafana_dashboard_collapsed.png" alt="Grafana Metrics" width="48%"/>
-  <img src="docs/images/outputs/zipkin_ui.png" alt="Zipkin Distributed Tracing" width="48%"/>
-</div>
+- Fully automated IaC provisioning.
+- Automated CI/CD pipeline from commit to deployment.
 
 ---
 
@@ -121,44 +151,47 @@ Because distributed systems are difficult to debug, I implemented comprehensive 
   <img src="docs/images/architecture/ci-cd_pipeline.png" alt="CI/CD Pipeline" width="100%"/>
 </div>
 
-- **Build:** Maven compiles the source code.
-- **Test:** Runs unit and integration tests (Testcontainers).
-- **Jib:** Builds optimized, distroless Docker images without requiring a Docker daemon.
-- **Amazon ECR:** Pushes images to AWS using OIDC authentication.
-- **Kubernetes Deployment:** Uses Kustomize to update image tags and applies manifests to K3s.
-- **Smoke Tests:** Verifies the deployment health.
+Developer Push
+      ↓
+GitHub Actions
+      ↓
+Build & Test
+      ↓
+Jib Image Build
+      ↓
+Amazon ECR
+      ↓
+Kubernetes (K3s)
+      ↓
+Smoke Tests
 
 ---
 
-## 🧠 Lessons Learned
-- **Distributed Systems:** Handling partial failures is harder than writing the happy path. Circuit breakers are mandatory, not optional.
-- **Data Consistency:** The Dual-Write problem is a real threat; relying on simple sequential execution without an Outbox pattern guarantees eventual data loss.
-- **Kubernetes:** Application startup order cannot be guaranteed. Liveness and readiness probes are required to prevent crash loops when databases take longer to boot than the application.
-- **DevOps:** Automating infrastructure and pipelines upfront saves countless hours of manual debugging and server configuration.
+## 📊 Observability
 
----
+Because distributed systems are difficult to debug, every request is tagged with a trace ID that flows through the Gateway, into the internal services, and across Kafka.
 
-## 🔮 Future Improvements
-- Horizontal pod autoscaling (HPA) for individual services based on CPU load.
-- Centralized logging stack (ELK/EFK) to aggregate logs from all Kubernetes pods.
-- Implement an automated performance testing suite (e.g., Gatling or JMeter).
+<div align="center">
+  <img src="docs/images/outputs/grafana_dashboard_collapsed.png" alt="Grafana Metrics" width="48%"/>
+  <img src="docs/images/outputs/zipkin_ui.png" alt="Zipkin Distributed Tracing" width="48%"/>
+</div>
 
 ---
 
 ## ⚡ Quick Start
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/indrajithas673/cloud-native-ecommerce.git
 cd cloud-native-ecommerce
 
-# 2. Start the backing infrastructure (MySQL, Keycloak, Kafka, Zipkin, Prometheus)
+# Start the backing infrastructure (MySQL, Kafka, Keycloak, Zipkin, Prometheus)
 docker-compose up -d
 
-# 3. Start a service locally
+# Start a service locally
 cd product-service
 ./mvnw spring-boot:run
 ```
+*For detailed setup, see the [Local Development Setup](docs/DEVELOPMENT.md).*
 
 ---
 
@@ -167,3 +200,27 @@ cd product-service
 - ☁️ [Infrastructure & Deployment Guide](docs/DEPLOYMENT.md)
 - 🔌 [API Reference](docs/API.md)
 - 💻 [Local Development Setup](docs/DEVELOPMENT.md)
+
+---
+
+## 🎓 Why I Built This
+
+I built this project as a final-year engineering student to transition from writing basic CRUD applications to understanding how large-scale, distributed systems actually operate in the real world. 
+
+I wanted to move beyond tutorials and get hands-on experience solving the hard problems: ensuring data doesn't get lost between microservices, keeping the system alive when a downstream service crashes, writing infrastructure as code, and fully automating the deployment process using modern CI/CD security practices.
+
+---
+
+## 🧠 Lessons Learned
+- **Handling Partial Failures:** In a distributed system, network calls will eventually fail. Implementing circuit breakers taught me that failing fast gracefully is much better than waiting and crashing the whole system.
+- **Data Consistency is Hard:** Realizing that saving to a database and sending a Kafka message isn't atomic opened my eyes to the dual-write problem. Implementing the Transactional Outbox pattern was a major lightbulb moment.
+- **Startup Dependencies:** Kubernetes will aggressively restart containers if they fail their liveness probes. I learned the hard way that applications must be configured to patiently wait for databases to initialize before accepting traffic.
+- **Automation Pays Off:** Spending the time to write Terraform scripts and GitHub Actions workflows felt slow at first, but it saved me countless hours of manual debugging and server configuration later on.
+
+---
+
+## 🔮 Future Improvements
+- Horizontal Pod Autoscaling (HPA) for services based on CPU load.
+- Multi-node Kubernetes cluster.
+- Centralized logging stack (EFK) to aggregate logs from all pods.
+- Implement an automated performance testing suite (e.g., Gatling or JMeter).
