@@ -1,6 +1,4 @@
-<div align="center">
-  <img src="docs/images/banner.png" alt="Cloud-Native E-Commerce Platform Banner" width="100%"/>
-  
+<div align="center"> 
   # 🛒 Cloud-Native E-Commerce Platform
   
   **Event-driven e-commerce backend built using Spring Boot, Kafka, Kubernetes, Terraform, and AWS.**
