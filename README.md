@@ -77,12 +77,12 @@ This project focuses on distributed system design, secure cloud deployment, Infr
 **Terraform**  
 *Problem:* Provisioning cloud infrastructure manually via a UI is slow, error-prone, and difficult to reproduce.  
 *Solution:* Codify the AWS VPC, Subnets, EC2 instance, Security Groups, and Amazon RDS instance using Terraform.  
-*Benefit:* Ensures the entire infrastructure is version-controlled and can be destroyed or recreated with a single command.
+*Benefit:* Helps ensure the entire infrastructure is version-controlled and can be destroyed or recreated with a single command.
 
 **GitHub Actions + AWS OIDC**  
 *Problem:* Storing long-lived AWS IAM access keys in GitHub Secrets is a major security risk if compromised.  
 *Solution:* Configure OpenID Connect (OIDC) between GitHub and AWS.  
-*Benefit:* GitHub Actions assumes a strictly scoped, temporary IAM role just in time for deployment, eliminating the need for hardcoded credentials.
+*Benefit:* GitHub Actions assumes a strictly scoped, temporary IAM role just in time for deployment, helping eliminate the need for hardcoded credentials.
 
 **Kubernetes (K3s)**  
 *Problem:* Managing raw Docker containers manually on an EC2 instance makes updates and secrets management difficult. AWS EKS is too expensive for a learning project.  
@@ -152,9 +152,9 @@ This project focuses on distributed system design, secure cloud deployment, Infr
 </div>
 
 - Build and test the application.
-- Build optimized container images using Google Jib.
+- Build optimized container images using Google Jib (builds directly from Maven without requiring Dockerfiles).
 - Push images to Amazon ECR.
-- Deploy updated workloads to Kubernetes using Kustomize.
+- Deploy updated workloads to Kubernetes using Kustomize (manages environment-specific configuration without duplicating manifests).
 
 ---
 
@@ -189,6 +189,7 @@ cd product-service
 ## 📚 Documentation
 - 📐 [System Architecture](docs/ARCHITECTURE.md)
 - ☁️ [Infrastructure & Deployment Guide](docs/DEPLOYMENT.md)
+- 🛡️ [Security & IAM Guide](docs/SECURITY.md)
 - 🔌 [API Reference](docs/API.md)
 - 💻 [Local Development Setup](docs/DEVELOPMENT.md)
 
