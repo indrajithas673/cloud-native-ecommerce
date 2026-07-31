@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="docs/images/banner.png" alt="Cloud-Native Micro Marketplace Banner" width="100%"/>
+  <img src="docs/images/banner.png" alt="Cloud-Native E-Commerce Platform Banner" width="100%"/>
   
   # 🛒 Cloud-Native E-Commerce Platform
   
-  **A production-ready, event-driven microservices backend built for scale.**
+  **Event-driven e-commerce backend built using Spring Boot, Kafka, Kubernetes, Terraform, and AWS.**
 
   [![CI Pipeline](https://github.com/indrajithas673/cloud-native-ecommerce/actions/workflows/ci.yml/badge.svg)](https://github.com/indrajithas673/cloud-native-ecommerce/actions/workflows/ci.yml)
   [![Java 17](https://img.shields.io/badge/Java-17-007396.svg?logo=java&logoColor=white)](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html)
@@ -11,70 +11,61 @@
   [![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Event_Driven-231F20.svg?logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
   [![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-326ce5?logo=kubernetes&logoColor=white)](https://k3s.io/)
   [![AWS Infrastructure](https://img.shields.io/badge/AWS-Cloud-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
-
-  *Demonstrating distributed systems, asynchronous messaging, and modern cloud deployments.*
 </div>
 
 ---
 
-## 📖 Project Overview
-
-This project is a comprehensive backend for a modern e-commerce platform. It transitions away from traditional monolithic design to a robust **Microservices Architecture**, handling core functionalities like product cataloging, order processing, inventory management, and asynchronous user notifications.
-
-> **Goal:** To engineer a scalable, highly available distributed system with real-world complexities—including inter-service communication, distributed tracing, and infrastructure-as-code (IaC).
-
-### 🏗️ Core Services
-- 🚪 **API Gateway**: Single entry point routing traffic and enforcing security.
-- 📦 **Product Service**: Manages the product catalog.
-- 🛒 **Order Service**: Handles transactions and triggers stock verification.
-- 🧮 **Inventory Service**: Maintains stock levels and reserves items.
-- 📬 **Notification Service**: Asynchronously emails users upon successful orders.
-- 🔐 **Keycloak**: Issues JWTs and manages user identity.
+### ✨ Project Highlights
+* **Event-Driven Architecture**: Decoupled services using Apache Kafka.
+* **Transactional Outbox**: Guaranteed data consistency without dual-write issues.
+* **Circuit Breakers**: Prevented cascading failures using Resilience4j.
+* **Secure API Gateway**: Centralized OAuth2/JWT validation via Keycloak.
+* **Infrastructure as Code**: 100% automated AWS provisioning with Terraform.
+* **Automated CI/CD**: Seamless GitHub Actions deployments using secure AWS OIDC.
 
 ---
 
-## ✨ Key Features
+## 🎯 Motivation
 
-- **Event-Driven Architecture**: Uses **Apache Kafka** to decouple services. The Order Service publishes events without waiting, preventing cascading failures.
-- **Secure by Default**: End-to-end security using **OAuth2** and **JWT** via Keycloak.
-- **Distributed Observability**: Integrated with **Zipkin**, **Prometheus**, and **Grafana** for tracing requests across multiple microservices.
-- **Container Orchestration**: Deployed to a **K3s Kubernetes** cluster, ensuring high availability and automatic restarts.
-- **Automated Infrastructure**: 100% of the AWS infrastructure (VPC, EC2, RDS, IAM) is provisioned via **Terraform**.
-- **Fully Automated CI/CD**: **GitHub Actions** pipeline builds images, pushes to Amazon ECR, and deploys manifests directly to Kubernetes.
+I built this project to transition from writing simple monolithic applications to tackling the real-world complexities of distributed systems. E-commerce platforms handle unpredictable traffic and require strict data consistency. This project demonstrates how to decouple services to prevent cascading failures, how to safely publish events without losing data, and how to automate the entire infrastructure and deployment lifecycle in the cloud.
 
 ---
 
-## 🏛️ Architecture & Request Flow
+## 🏛️ System Architecture
 
 <div align="center">
-  <img src="docs/images/architecture/SolutionArchitecture.png" alt="Solution Architecture" width="800"/>
+  <img src="docs/images/architecture/high-level-architecture.png" alt="High Level Architecture" width="100%"/>
 </div>
 
-1. **Client** sends an HTTP request (e.g., "Place Order") with a valid JWT.
-2. **API Gateway** intercepts, validates the JWT with **Keycloak**, and forwards to the target service.
-3. The **Order Service** makes a synchronous call to the **Inventory Service** to verify stock.
-4. If valid, the **Order Service** saves the order to **Amazon RDS** and publishes an `OrderPlacedEvent` to **Kafka**.
-5. The **Notification Service** asynchronously consumes the event and processes the notification.
+### Request Flow
+1. **Client** sends an HTTP request with a valid JWT.
+2. **API Gateway** intercepts, validates the JWT signature with Keycloak, and routes the request.
+3. The **Order Service** receives the request and makes a synchronous call to the **Inventory Service** to verify stock.
+4. The **Order Service** saves the order to **Amazon RDS** and atomically saves an event to its Outbox table.
+5. The Outbox scheduler publishes the event to **Kafka**.
+6. The **Notification Service** asynchronously consumes the event and processes the user notification.
 
 ---
 
-## 🚀 Quick Start (Local Development)
+## 💡 Key Engineering Decisions
 
-Want to run the entire microservices stack on your local machine? It's as simple as one command.
+**Transactional Outbox**  
+Writing to a database and publishing to a message broker are two separate operations; if Kafka crashes after the database saves, the event is permanently lost. I implemented the Transactional Outbox pattern to guarantee consistency by saving the order and the Kafka event in a single database transaction. 
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/indrajithas673/cloud-native-ecommerce.git
-cd cloud-native-ecommerce
+**Circuit Breaker**  
+If the Inventory Service goes down, the Order Service could run out of threads waiting for a response, causing the entire system to crash. I used Resilience4j to fail fast and return a clean fallback response ("Inventory service is currently unavailable") to preserve overall system stability.
 
-# 2. Start the infrastructure (MySQL, Keycloak, Kafka, Zipkin)
-docker-compose up -d
+**Kafka**  
+Synchronous HTTP calls create tight coupling. Kafka was used to decouple the critical path (placing an order) from non-critical tasks (sending emails), allowing the Notification Service to process events at its own pace or catch up if it restarts.
 
-# 3. Build and run the microservices (requires Java 17 and Maven)
-./mvnw clean package -DskipTests
-# Run individual services via your IDE or java -jar
-```
-*For detailed instructions, see the [Local Development Setup](docs/DEVELOPMENT.md).*
+**Terraform**  
+Clicking through the AWS console is error-prone. I provisioned the AWS VPC, EC2 instance, and Amazon RDS database using Terraform so the environment is perfectly reproducible and version-controlled.
+
+**GitHub Actions + AWS OIDC**  
+Storing long-lived AWS IAM access keys in GitHub Secrets is a security risk. I secured the CI/CD pipeline by using OpenID Connect (OIDC) to issue temporary, strictly scoped credentials just in time for deployment.
+
+**Kubernetes (K3s)**  
+AWS EKS is expensive and complex for a learning project. I used K3s to orchestrate containers, manage secrets, and ensure automatic service restarts, providing standard Kubernetes primitives on a single affordable EC2 instance.
 
 ---
 
@@ -82,34 +73,97 @@ docker-compose up -d
 
 | Category | Technology |
 | :--- | :--- |
-| **Backend** | Java 17, Spring Boot 3.1, Spring Cloud |
+| **Backend** | Java 17, Spring Boot 3.1, Spring Cloud Gateway |
 | **Security** | Keycloak, OAuth2, JWT |
 | **Messaging** | Apache Kafka (KRaft mode) |
-| **Database** | Amazon RDS (MySQL 8.4), Spring Data JPA |
+| **Database** | Amazon RDS (MySQL 8.0), Spring Data JPA, Flyway |
 | **Observability** | Micrometer, Zipkin, Prometheus, Grafana |
 | **Infrastructure** | Terraform, AWS EC2, K3s (Kubernetes) |
-| **DevOps** | GitHub Actions, Jib, Kustomize |
+| **DevOps** | GitHub Actions, AWS OIDC, Jib, Kustomize |
 
 ---
 
-## 💡 Engineering Decisions
+## 📁 Repository Structure
+- `api-gateway`: Spring Cloud Gateway application serving as the single entry point.
+- `product-service`: Manages the product catalog.
+- `order-service`: Core service handling transactions and Outbox publishing.
+- `inventory-service`: Manages stock levels atomically.
+- `notification-service`: Kafka consumer that processes asynchronous events.
+- `terraform`: IaC files provisioning the AWS environment.
+- `k8s`: Kubernetes manifests managed with Kustomize.
+- `.github/workflows`: Automated CI/CD pipeline definitions.
 
-- **Why Kafka?** Direct HTTP calls create tight coupling. Kafka allows services to operate independently, absorbing traffic spikes (e.g., Black Friday) without crashing downstream services.
-- **Why Keycloak?** Avoids reinventing the wheel for IAM. Provides enterprise-grade security and standard OAuth2 flows out of the box.
-- **Why K3s?** AWS EKS is expensive and complex. K3s provides a fully CNCF-compliant Kubernetes distribution that is lightweight and perfect for this scale.
-- **Why Terraform?** Ensures infrastructure is reproducible, version-controlled, and eliminates "click-ops" errors.
+---
+
+## 🚀 Features
+- Centralized API routing with JWT validation.
+- Synchronous inter-service communication with Circuit Breakers.
+- Asynchronous messaging for event-driven workflows.
+- Distributed tracing across HTTP and messaging boundaries.
+- Fully automated IaC provisioning and CI/CD pipelines.
+
+---
+
+## 📊 Observability
+
+Because distributed systems are difficult to debug, I implemented comprehensive tracing and metrics. Every request is tagged with a trace ID that flows through the Gateway, into the internal services, and across Kafka.
+
+<div align="center">
+  <img src="docs/images/outputs/grafana_dashboard_collapsed.png" alt="Grafana Metrics" width="48%"/>
+  <img src="docs/images/outputs/zipkin_ui.png" alt="Zipkin Distributed Tracing" width="48%"/>
+</div>
+
+---
+
+## 🔄 CI/CD Pipeline
+
+<div align="center">
+  <img src="docs/images/architecture/ci-cd_pipeline.png" alt="CI/CD Pipeline" width="100%"/>
+</div>
+
+- **Build:** Maven compiles the source code.
+- **Test:** Runs unit and integration tests (Testcontainers).
+- **Jib:** Builds optimized, distroless Docker images without requiring a Docker daemon.
+- **Amazon ECR:** Pushes images to AWS using OIDC authentication.
+- **Kubernetes Deployment:** Uses Kustomize to update image tags and applies manifests to K3s.
+- **Smoke Tests:** Verifies the deployment health.
+
+---
+
+## 🧠 Lessons Learned
+- **Distributed Systems:** Handling partial failures is harder than writing the happy path. Circuit breakers are mandatory, not optional.
+- **Data Consistency:** The Dual-Write problem is a real threat; relying on simple sequential execution without an Outbox pattern guarantees eventual data loss.
+- **Kubernetes:** Application startup order cannot be guaranteed. Liveness and readiness probes are required to prevent crash loops when databases take longer to boot than the application.
+- **DevOps:** Automating infrastructure and pipelines upfront saves countless hours of manual debugging and server configuration.
+
+---
+
+## 🔮 Future Improvements
+- Horizontal pod autoscaling (HPA) for individual services based on CPU load.
+- Centralized logging stack (ELK/EFK) to aggregate logs from all Kubernetes pods.
+- Implement an automated performance testing suite (e.g., Gatling or JMeter).
+
+---
+
+## ⚡ Quick Start
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/indrajithas673/cloud-native-ecommerce.git
+cd cloud-native-ecommerce
+
+# 2. Start the backing infrastructure (MySQL, Keycloak, Kafka, Zipkin, Prometheus)
+docker-compose up -d
+
+# 3. Start a service locally
+cd product-service
+./mvnw spring-boot:run
+```
 
 ---
 
 ## 📚 Documentation
-
-Dive deeper into the implementation:
 - 📐 [System Architecture](docs/ARCHITECTURE.md)
 - ☁️ [Infrastructure & Deployment Guide](docs/DEPLOYMENT.md)
 - 🔌 [API Reference](docs/API.md)
 - 💻 [Local Development Setup](docs/DEVELOPMENT.md)
-
----
-<div align="center">
-  <i>A robust demonstration of practical cloud-native backend development.</i>
-</div>
