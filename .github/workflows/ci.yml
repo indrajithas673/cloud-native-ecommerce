@@ -78,7 +78,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::889812257815:role/github-actions-deploy-role
+          role-to-assume: arn:aws:iam::035466343449:role/github-actions-deploy-role
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Verify AWS Identity
@@ -123,7 +123,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::889812257815:role/github-actions-deploy-role
+          role-to-assume: arn:aws:iam::035466343449:role/github-actions-deploy-role
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Update ECR Image Pull Secret
