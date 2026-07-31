@@ -75,13 +75,6 @@ jobs:
           java-version: '17'
           cache: maven
 
-      - name: Debug OIDC Token
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const token = await core.getIDToken('sts.amazonaws.com');
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            console.log(JSON.stringify(payload, null, 2));
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -127,13 +120,6 @@ jobs:
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Debug OIDC Token
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const token = await core.getIDToken('sts.amazonaws.com');
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-            console.log(JSON.stringify(payload, null, 2));
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
