@@ -11,12 +11,19 @@
   [![AWS Infrastructure](https://img.shields.io/badge/AWS-Cloud-FF9900?logo=amazonaws&logoColor=white)](https://aws.amazon.com/)
 </div>
 
+## 🚦 Project Status
+
+- ✅ Cloud deployment completed on AWS
+- ✅ Kubernetes deployment automated using GitHub Actions
+- ✅ Infrastructure provisioned using Terraform
+- ✅ Event-driven microservices using Apache Kafka
+
 ---
 
 ## 🌟 Why This Project Stands Out
 
 - **Event-Driven Architecture**: Decoupled services using Apache Kafka.
-- **Transactional Outbox**: Guaranteed data consistency across distributed databases.
+- **Transactional Outbox**: Improved data consistency across distributed databases.
 - **Circuit Breakers**: Prevented cascading system failures using Resilience4j.
 - **Kubernetes**: Orchestrated containers with K3s for automatic healing and secrets management.
 - **Terraform**: Codified 100% of the AWS infrastructure.
@@ -30,6 +37,8 @@
 
 > 5 Spring Boot Microservices | 1 API Gateway | Apache Kafka | Amazon RDS | Kubernetes (K3s) | Terraform Infrastructure | GitHub Actions CI/CD | OAuth2 Authentication | Event-driven Communication | Distributed Tracing
 
+This project focuses on distributed system design, secure cloud deployment, Infrastructure as Code, and automated CI/CD using modern backend engineering practices.
+
 ---
 
 ## 🏛️ System Architecture
@@ -39,52 +48,45 @@
 </div>
 
 ### Request Flow
-Client
-↓
-API Gateway
-↓
-Keycloak
-↓
-Order Service
-↓
-Amazon RDS
-↓
-Kafka
-↓
-Notification Service
+1. Client sends a request to the API Gateway.
+2. API Gateway validates the JWT using Keycloak.
+3. Request is routed to the target microservice.
+4. Business data is stored in Amazon RDS.
+5. Order Service publishes an event to Kafka.
+6. Notification Service consumes the event asynchronously.
 
 ---
 
 ## 💡 Engineering Decisions
 
 **Transactional Outbox**  
-*Problem:* Saving an order to a database and publishing an event to Kafka are two distinct operations. If Kafka crashes immediately after the database saves, the event is permanently lost (the Dual-Write problem).  
+*Problem:* Saving an order to a database and publishing an event to Kafka are distinct operations. If Kafka crashes immediately after the database saves, the event is permanently lost (the Dual-Write problem).  
 *Solution:* Save the Order entity and an Outbox event entity in the same atomic database transaction. A separate scheduler polls the Outbox table and publishes to Kafka.  
-*Benefit:* Guarantees at-least-once delivery without data loss.
+*Benefit:* Improves reliability by storing the business data and the event within the same database transaction before asynchronous publication.
 
 **Circuit Breaker**  
 *Problem:* If the Inventory Service goes down, the Order Service could run out of threads waiting for a response, causing the entire system to crash.  
-*Solution:* Implemented Resilience4j to fail fast after a timeout and return a clean fallback response ("Inventory service is currently unavailable").  
+*Solution:* Implement Resilience4j to fail fast after a timeout and return a clean fallback response ("Inventory service is currently unavailable").  
 *Benefit:* Preserves overall system stability and prevents cascading failures.
 
 **Kafka**  
 *Problem:* Synchronous HTTP calls between all services create tight coupling and slow response times.  
-*Solution:* Used Apache Kafka to decouple the critical path (placing an order) from non-critical tasks (sending emails).  
+*Solution:* Use Apache Kafka to decouple the critical path (placing an order) from non-critical tasks (sending emails).  
 *Benefit:* Allows the Notification Service to process events asynchronously or catch up if it restarts without impacting user checkout speed.
 
 **Terraform**  
 *Problem:* Provisioning cloud infrastructure manually via a UI is slow, error-prone, and difficult to reproduce.  
-*Solution:* Codified the AWS VPC, Subnets, EC2 instance, Security Groups, and Amazon RDS instance using Terraform.  
+*Solution:* Codify the AWS VPC, Subnets, EC2 instance, Security Groups, and Amazon RDS instance using Terraform.  
 *Benefit:* Ensures the entire infrastructure is version-controlled and can be destroyed or recreated with a single command.
 
 **GitHub Actions + AWS OIDC**  
 *Problem:* Storing long-lived AWS IAM access keys in GitHub Secrets is a major security risk if compromised.  
-*Solution:* Configured OpenID Connect (OIDC) between GitHub and AWS.  
+*Solution:* Configure OpenID Connect (OIDC) between GitHub and AWS.  
 *Benefit:* GitHub Actions assumes a strictly scoped, temporary IAM role just in time for deployment, eliminating the need for hardcoded credentials.
 
 **Kubernetes (K3s)**  
 *Problem:* Managing raw Docker containers manually on an EC2 instance makes updates and secrets management difficult. AWS EKS is too expensive for a learning project.  
-*Solution:* Deployed K3s, a lightweight, CNCF-certified Kubernetes distribution, directly onto the EC2 instance.  
+*Solution:* Deploy K3s, a lightweight, CNCF-certified Kubernetes distribution, directly onto the EC2 instance.  
 *Benefit:* Provides the full power of Kubernetes (Deployments, Services, automated restarts) without the heavy cloud bill.
 
 ---
@@ -149,19 +151,10 @@ Notification Service
   <img src="docs/images/architecture/ci-cd_pipeline.png" alt="CI/CD Pipeline" width="100%"/>
 </div>
 
-Developer Push
-      ↓
-GitHub Actions
-      ↓
-Build & Test
-      ↓
-Jib Image Build
-      ↓
-Amazon ECR
-      ↓
-Kubernetes (K3s)
-      ↓
-Smoke Tests
+- Build and test the application.
+- Build optimized container images using Google Jib.
+- Push images to Amazon ECR.
+- Deploy updated workloads to Kubernetes using Kustomize.
 
 ---
 
