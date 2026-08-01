@@ -13,6 +13,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     Optional<Inventory> findBySkuCode(String skuCode);
 
     @Modifying
-    @Query("UPDATE Inventory i SET i.quantity = i.quantity - :quantity WHERE i.skuCode = :skuCode")
+    @Query("UPDATE Inventory i SET i.quantity = i.quantity - :quantity WHERE i.skuCode = :skuCode AND i.quantity >= :quantity")
     int deductInventory(@Param("skuCode") String skuCode, @Param("quantity") Integer quantity);
 }

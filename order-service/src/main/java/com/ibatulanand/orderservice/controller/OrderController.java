@@ -8,6 +8,7 @@ import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -27,7 +28,7 @@ public class OrderController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CompletableFuture<String> placeOrder(@RequestBody OrderRequest orderRequest) {
+    public CompletableFuture<String> placeOrder(@Valid @RequestBody OrderRequest orderRequest) {
         return CompletableFuture.supplyAsync(() -> orderService.placeOrder(orderRequest));
     }
 }

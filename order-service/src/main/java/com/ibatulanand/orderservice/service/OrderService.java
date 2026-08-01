@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 
 @Service
 @RequiredArgsConstructor
@@ -96,6 +97,7 @@ public class OrderService {
 
     @CircuitBreaker(name = "inventory", fallbackMethod = "inventoryFallback")
     @TimeLimiter(name = "inventory")
+    @Retry(name = "inventory")
     public CompletableFuture<String> callInventory(List<InventoryDeductRequest> deductRequests) {
         return CompletableFuture.supplyAsync(() -> {
             webClientBuilder.build().post()
